@@ -1,44 +1,68 @@
 
-struct Printer;
-impl Visitor<String> for Printer {
-	
-	fn visit_expr(&mut self, expr: &Expr) -> String {
-		match *expr {
-			Expr::Literal(ref v) => {
-				match v {
-					Literal::StringType(s) => s.clone(),
-					Literal::FloatType(f) => f.to_string(),
-					Literal::Identifier => todo!(),
-					Literal::None => "nil".to_string(),
-				}
-			},
-			Expr::Group(ref v) => format!("(grp {})", self.visit_expr(v)),
-			Expr::Unary(ref tok, ref v) => {
-				match tok {
-					TokenType::Minus => format!("(- {})", self.visit_expr(v)),
-					_ => unimplemented!()
-				}
-			},
-			Expr::Add(ref v1, ref v2) => format!("(+ {} {})", self.visit_expr(v1), self.visit_expr(v2)),
-			Expr::Sub(ref v1, ref v2) => format!("(- {} {})", self.visit_expr(v1), self.visit_expr(v2)),
-			Expr::Mul(ref v1, ref v2) => format!("(* {} {})", self.visit_expr(v1), self.visit_expr(v2)),
-			Expr::Div(ref v1, ref v2) => format!("(/ {} {})", self.visit_expr(v1), self.visit_expr(v2)),
+struct Constant {
+	v: Literal
+}
+
+impl Expr for Constant {}
+impl Eval for Constant {
+	fn eval(&self) -> Literal {
+		self.v.clone()
+	}
+}
+
+struct Group {
+	v: Box<dyn Expr>
+}
+
+impl Expr for Group {}
+impl Eval for Group {
+	fn eval(&self) -> Literal {
+		self.v.eval()
+	}
+}
+
+struct Unary {
+	v: Box<dyn Expr>,
+	tok: Token,
+}
+
+impl Expr for Unary {}
+impl Eval for Unary {
+	fn eval(&self) -> Literal {
+		use TokenType::*;
+		
+		match self.tok.typing {
+			Minus => Literal::sub(Literal::FloatType(0.0), self.v.eval()),
+			Bang => todo!(),
+			_ => unimplemented!()
 		}
 	}
 }
 
-trait Visitor<T> {
-	fn visit_expr(&mut self, expr: &Expr) -> T;
+struct Binary {
+	v1: Box<dyn Expr>,
+	tok: Token,
+	v2: Box<dyn Expr>
 }
 
-enum Expr {
-	Literal(Literal),
-	Group(Box<Expr>),
-	Unary(TokenType, Box<Expr>),
-	Add(Box<Expr>, Box<Expr>),
-	Sub(Box<Expr>, Box<Expr>),
-	Mul(Box<Expr>, Box<Expr>),
-	Div(Box<Expr>, Box<Expr>),
+impl Expr for Binary {}
+impl Eval for Binary {
+	fn eval(&self) -> Literal {
+		use TokenType::*;
+		
+		match self.tok.typing {
+			Plus => Literal::sum(self.v1.eval(), self.v2.eval()),
+			Minus => Literal::sub(self.v1.eval(), self.v2.eval()),
+			Star => Literal::mul(self.v1.eval(), self.v2.eval()),
+			Slash => Literal::div(self.v1.eval(), self.v2.eval()),
+			_ => unimplemented!()
+		}
+	}
+}
+
+trait Expr: Eval {}
+trait Eval {
+	fn eval(&self) -> Literal;
 }
 
 struct Scanner<'a> {
@@ -311,8 +335,58 @@ enum TokenType {
 enum Literal {
 	StringType(String),
 	FloatType(f64),
-	Identifier,
+	BoolType(bool),
 	None
+}
+
+impl Literal {
+	fn sum(l1: Literal, l2: Literal) -> Literal {
+		use Literal::*;
+		
+		match (l1, l2) {
+			(StringType(v1), StringType(v2)) => StringType(format!("{}{}", v1, v2)),
+			(FloatType(v1), FloatType(v2)) => FloatType(v1 + v2),
+			(StringType(v1), FloatType(v2)) => StringType(v1 + v2.to_string().as_str()),
+			(FloatType(v1), StringType(v2)) => StringType(v1.to_string() + v2.as_str()),
+			_ => unimplemented!()
+		}
+	}
+
+	fn sub(l1: Literal, l2: Literal) -> Literal {
+		use Literal::*;
+		
+		match (l1, l2) {
+			(StringType(v1), StringType(v2)) => panic!("Cannot subtract two strings!"),
+			(FloatType(v1), FloatType(v2)) => FloatType(v1 - v2),
+			(StringType(v1), FloatType(v2)) => panic!("Cannot subtract string and float!"),
+			(FloatType(v1), StringType(v2)) => panic!("Cannot subtract float and string!"),
+			_ => unimplemented!()
+		}
+	}
+
+	fn mul(l1: Literal, l2: Literal) -> Literal {
+		use Literal::*;
+		
+		match (l1, l2) {
+			(StringType(v1), StringType(v2)) => panic!("Cannot multiplicate two strings!"),
+			(FloatType(v1), FloatType(v2)) => FloatType(v1 * v2),
+			(StringType(v1), FloatType(v2)) => panic!("Cannot multiplicate string and float!"),
+			(FloatType(v1), StringType(v2)) => panic!("Cannot multiplicate float and string!"),
+			_ => unimplemented!()
+		}
+	}
+
+	fn div(l1: Literal, l2: Literal) -> Literal {
+		use Literal::*;
+		
+		match (l1, l2) {
+			(StringType(v1), StringType(v2)) => panic!("Cannot divide two strings!"),
+			(FloatType(v1), FloatType(v2)) => FloatType(v1 / v2),
+			(StringType(v1), FloatType(v2)) => panic!("Cannot divide string and float!"),
+			(FloatType(v1), StringType(v2)) => panic!("Cannot divide float and string!"),
+			_ => unimplemented!()
+		}
+	}
 }
 
 impl Clone for Literal {
@@ -322,7 +396,7 @@ impl Clone for Literal {
 		match self {
 			StringType(v) => StringType(v.clone()),
 			FloatType(v) => FloatType(v.clone()),
-			Identifier => Identifier,
+			BoolType(v) => BoolType(v.clone()),
 			None => None
 		}
 	}
@@ -351,7 +425,7 @@ impl ToString for Token {
 		match &self.literal {
 			Literal::StringType(v) => temporary.push_str(&v),
 			Literal::FloatType(v) => temporary.push_str(&v.to_string()),
-			Literal::Identifier => todo!(),
+			Literal::BoolType(v) => temporary.push_str(&v.to_string()),
 			Literal::None => temporary.push_str(""),
 		}
 
@@ -365,7 +439,7 @@ impl Clone for Token {
 		match &self.literal {
 			Literal::StringType(v) => literal = Literal::StringType(v.clone()),
 			Literal::FloatType(v) => literal = Literal::FloatType(v.clone()),
-			Literal::Identifier => literal = Literal::Identifier,
+			Literal::BoolType(v) => literal = Literal::BoolType(v.clone()),
 			Literal::None => literal = Literal::None
 		}
 		
@@ -449,24 +523,6 @@ impl Lll {
 
 
 fn main() -> std::io::Result<()> {
-
-	let mut debug: Printer = Printer {};
-	println!("{}", debug.visit_expr(&Expr::Add(
-		Box::new(Expr::Unary(TokenType::Minus,
-							 Box::new(Expr::Literal(Literal::FloatType(30.0))))),
-		Box::new(Expr::Div(
-			Box::new(Expr::Group(
-				Box::new(Expr::Mul(
-					Box::new(Expr::Literal(Literal::FloatType(53.2))),
-					Box::new(Expr::Literal(Literal::FloatType(2321.2)))
-				))
-			)),
-			Box::new(Expr::Add(
-				Box::new(Expr::Literal(Literal::FloatType(232.22))),
-				Box::new(Expr::Literal(Literal::FloatType(555.2222)))
-			))
-		))
-	)));
 	
     // let args: Vec<_> = std::env::args().collect();
 
