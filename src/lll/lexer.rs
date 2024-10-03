@@ -2,6 +2,7 @@
 use crate::lll::token::TokenType;
 use crate::lll::token::Literal;
 use crate::lll::token::Token;
+use crate::lll::error::Error;
 
 struct Stringstream {
 	text: String,
@@ -47,14 +48,17 @@ impl Lexer {
 
 	pub fn scan_tokens(&mut self) -> Vec<Token> {
 		while let Some(c) = self.advance() {
-			self.scan_token(c);
+			match self.scan_token(c) {
+				Ok(()) => (),
+				Err(v) => println!("{v}")
+			}
 			self.prev_place = self.place;
 		}
 
 		self.tokens.clone()
 	}
 
-	fn scan_token(&mut self, c: char) {
+	fn scan_token(&mut self, c: char) -> Result<(), Error> {
 		use TokenType::*;
 		match c {
 			'(' => self.add_primitive_token(LeftParen),
@@ -110,10 +114,10 @@ impl Lexer {
 			c if c.is_digit(10) => self.number(),
 			c if c.is_alphabetic() => self.indentifier(),
 			_ => {
-				eprintln!("Unexpected character at {}, line {}, char {}", self.place, self.line, c);
-				panic!()
+				return Err(Error::new(format!("unexpected character, char {c}, line {}, place {}", self.line, self.place).as_str(), None));
 			}
 		}
+		Ok(())
 	}
 
 	fn number(&mut self) {		

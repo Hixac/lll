@@ -7,7 +7,6 @@ use crate::lll::parse::Parser;
 
 // maybe need to wrap around or not
 fn run(source: String) {
-	
 	let mut lexer = Lexer::new(source);
 
 	let mut tokens = lexer.scan_tokens();
@@ -22,7 +21,7 @@ fn run(source: String) {
 
 	match expr {
 		Some(mut v) => println!("{:?}", v.eval()),
-		None => eprintln!("None")
+		None => eprintln!("OCCURED ERROR. Finishing work.")
 	}
 }
 
