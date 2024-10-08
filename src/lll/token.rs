@@ -8,7 +8,7 @@ pub enum Literal {
 	Nil
 }
 
-impl Literal { // sum, sub, mul, div
+impl Literal { // sum, sub, mul, div, cmp
 	pub fn sum(v1: Literal, v2: Literal) -> Literal {
 		use Literal::*;
 		match (v1, v2) {
@@ -107,6 +107,111 @@ impl Literal { // sum, sub, mul, div
 			}
 		}
 	}
+
+	pub fn eq(v1: Literal, v2: Literal) -> Literal {
+		use Literal::*;
+		match (v1, v2) {
+			(String(v1), String(v2)) => { Bool(v1 == v2) },
+			(Float(v1), Float(v2)) => { Bool(v1 == v2) },
+			(String(_), Float(_)) => {
+				eprintln!("FATAL: cannot eq string and float");
+				std::process::exit(69);
+			},
+			(Float(_), String(_)) => {
+				eprintln!("FATAL: cannot eq float and string");
+				std::process::exit(69);
+			},
+			(Bool(v1), Bool(v2)) => { Bool(v1 == v2) }
+			_ => {
+				eprintln!("FATAL: cannot eq nil or identifier");
+				std::process::exit(69);
+			}
+		}
+	}
+
+	pub fn gt(v1: Literal, v2: Literal) -> Literal {
+		use Literal::*;
+		match (v1, v2) {
+			(String(v1), String(v2)) => { Bool(v1.len() > v2.len()) },
+			(Float(v1), Float(v2)) => { Bool(v1 > v2) },
+			(String(_), Float(_)) => {
+				eprintln!("FATAL: cannot gt string and float");
+				std::process::exit(69);
+			},
+			(Float(_), String(_)) => {
+				eprintln!("FATAL: cannot gt float and string");
+				std::process::exit(69);
+			},
+			(Bool(v1), Bool(v2)) => { Bool(v1 > v2) }
+			_ => {
+				eprintln!("FATAL: cannot gt nil or identifier");
+				std::process::exit(69);
+			}
+		}
+	}
+
+	pub fn egt(v1: Literal, v2: Literal) -> Literal {
+		use Literal::*;
+		match (v1, v2) {
+			(String(v1), String(v2)) => { Bool(v1.len() >= v2.len()) },
+			(Float(v1), Float(v2)) => { Bool(v1 >= v2) },
+			(String(_), Float(_)) => {
+				eprintln!("FATAL: cannot gt string and float");
+				std::process::exit(69);
+			},
+			(Float(_), String(_)) => {
+				eprintln!("FATAL: cannot gt float and string");
+				std::process::exit(69);
+			},
+			(Bool(v1), Bool(v2)) => { Bool(v1 >= v2) }
+			_ => {
+				eprintln!("FATAL: cannot gt nil or identifier");
+				std::process::exit(69);
+			}
+		}
+	}
+
+	pub fn lt(v1: Literal, v2: Literal) -> Literal {
+		use Literal::*;
+		match (v1, v2) {
+			(String(v1), String(v2)) => { Bool(v1.len() < v2.len()) },
+			(Float(v1), Float(v2)) => { Bool(v1 < v2) },
+			(String(_), Float(_)) => {
+				eprintln!("FATAL: cannot gt string and float");
+				std::process::exit(69);
+			},
+			(Float(_), String(_)) => {
+				eprintln!("FATAL: cannot gt float and string");
+				std::process::exit(69);
+			},
+			(Bool(v1), Bool(v2)) => { Bool(v1 < v2) }
+			_ => {
+				eprintln!("FATAL: cannot gt nil or identifier");
+				std::process::exit(69);
+			}
+		}
+	}
+
+	pub fn elt(v1: Literal, v2: Literal) -> Literal {
+		use Literal::*;
+		match (v1, v2) {
+			(String(v1), String(v2)) => { Bool(v1.len() <= v2.len()) },
+			(Float(v1), Float(v2)) => { Bool(v1 <= v2) },
+			(String(_), Float(_)) => {
+				eprintln!("FATAL: cannot gt string and float");
+				std::process::exit(69);
+			},
+			(Float(_), String(_)) => {
+				eprintln!("FATAL: cannot gt float and string");
+				std::process::exit(69);
+			},
+			(Bool(v1), Bool(v2)) => { Bool(v1 <= v2) }
+			_ => {
+				eprintln!("FATAL: cannot gt nil or identifier");
+				std::process::exit(69);
+			}
+		}
+	}
 }
 
 impl ToString for Literal {
@@ -158,7 +263,7 @@ pub enum TokenType {
 
 		// Keywords.
 		And, Class, Else, False, Fun, For, If, Nil, Or,
-		Print, Return, Super, This, True, Var, While,
+		Print, Return, Super, This, True, New, While,
 
 		Eof
 }

@@ -4,6 +4,42 @@ use super::token::TokenType;
 use super::token::Literal;
 use super::error::Error;
 
+pub trait Stmt: Emit { }
+pub trait Emit {
+	fn emit(&mut self);
+}
+
+struct Expression {
+	v: Box<dyn Expr>
+}
+
+impl Stmt for Expression { }
+impl Emit for Expression {
+	fn emit(&mut self) {
+		self.v.eval();
+	}
+}
+
+struct Print {
+	v: Box<dyn Expr>
+}
+
+impl Stmt for Print { }
+impl Emit for Print {
+	fn emit(&mut self) {
+		use Literal::*;
+		match self.v.eval() {
+			String(v) => {
+				print!("{}", v.replace("\\n", "\n"));
+			},
+			Float(v) => print!("{v}"),
+			Bool(v) => print!("{v}"),
+			Nil => print!("nil"),
+			Identifier(_) => print!("identifier"),
+		}
+	}
+}
+
 pub trait Expr: Eval { }
 pub trait Eval {
 	fn eval(&mut self) -> Literal;
@@ -74,6 +110,11 @@ impl Eval for Binary {
 			Minus => { return Literal::sub(self.v1.eval(), self.v2.eval()) }
 			Star => { return Literal::mul(self.v1.eval(), self.v2.eval()) }
 			Slash => { return Literal::div(self.v1.eval(), self.v2.eval()) }
+			Greater => { return Literal::gt(self.v1.eval(), self.v2.eval()) }
+			GreaterEqual => { return Literal::egt(self.v1.eval(), self.v2.eval()) }
+			Less => { return Literal::lt(self.v1.eval(), self.v2.eval()) }
+			LessEqual => { return Literal::elt(self.v1.eval(), self.v2.eval()) }
+			EqualEqual => { return Literal::eq(self.v1.eval(), self.v2.eval()) }
 			_ => {
 				eprintln!("FATAL: wrong operation");
 				std::process::exit(69)
@@ -88,19 +129,45 @@ pub struct Parser {
 }
 
 type ResExpr = Result<Box<dyn Expr>, Error>;
+type ResStmt = Result<Box<dyn Stmt>, Error>;
 impl Parser {
 	pub fn new(tokens: Vec<Token>) -> Self {
 		Self { tokens, current: 0 }
 	}
 
-	pub fn parse(&mut self) -> Option<Box<dyn Expr>> {
-		match self.expression() {
-			Ok(v) => return Some(v),
-			Err(v) => {
-				println!("{v}");
-				return None
+	pub fn parse(&mut self) -> Option<Vec<Box<dyn Stmt>>> {
+		
+		let mut stmts: Vec<Box<dyn Stmt>> = Vec::new();
+		while !self.is_at_end() {
+			match self.statement() {
+				Ok(v) => stmts.push(v),
+				Err(v) => println!("{v}")
 			}
 		}
+
+		Some(stmts)
+	}
+
+	fn statement(&mut self) -> ResStmt {
+		if self.select(&[TokenType::Print]) {
+			return self.print_statement();
+		}
+
+		self.expression_statement()
+	}
+
+	fn print_statement(&mut self) -> ResStmt {
+		let expr = self.expression();
+		self.consume(TokenType::Semicolon)?;
+
+		Ok(Box::new(Print { v: expr? }))
+	}
+
+	fn expression_statement(&mut self) -> ResStmt {
+		let expr = self.expression();
+		self.consume(TokenType::Semicolon)?;
+
+		Ok(Box::new(Expression { v: expr? }))
 	}
 
 	fn is_at_end(&self) -> bool {
@@ -118,7 +185,7 @@ impl Parser {
 			}
 
 			match self.tokens[self.current].toktype {
-				Class | Fun | Var | For | If | While | Print | Return => return,
+				Class | Fun | New | For | If | While | Print | Return => return,
 				_ => ()
 			}
 
@@ -207,7 +274,7 @@ impl Parser {
 			return Ok(());
 		}
 
-		Err(Error::new("expected {toktype}", None))
+		Err(Error::new(format!("expected {toktype}").as_str(), None))
 	}
 
 	fn select(&mut self, toktypes: &[TokenType]) -> bool {

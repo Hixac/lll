@@ -4,6 +4,7 @@ use crate::lll::token::Token;
 use crate::lll::token::TokenType;
 use crate::lll::token::Literal;
 use crate::lll::parse::Parser;
+use crate::lll::interpreter::interpret;
 
 // maybe need to wrap around or not
 fn run(source: String) {
@@ -17,11 +18,13 @@ fn run(source: String) {
 	}
 
 	let mut parser = Parser::new(tokens);
-	let expr = parser.parse();
+	let mut stmts = parser.parse();
 
-	match expr {
-		Some(mut v) => println!("{:?}", v.eval()),
-		None => eprintln!("OCCURED ERROR. Finishing work.")
+	match &mut stmts {
+		Some(v) => interpret(v),
+		None => {
+			eprintln!("FATAL: parser caused error")
+		}
 	}
 }
 

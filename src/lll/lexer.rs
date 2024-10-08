@@ -156,7 +156,7 @@ impl Lexer {
 			std::process::exit(69);
 		}
 		
-		let strlit = self.substring(None, None).unwrap();
+		let strlit = self.substring(Some(self.prev_place + 1), Some(self.place - 1)).unwrap();
 		self.add_token(Literal::String(strlit), TokenType::String, self.prev_place, self.line);
 	}
 	
@@ -217,8 +217,8 @@ impl Lexer {
 			return Some(This)
 		} else if word == "true" {
 			return Some(True)
-		} else if word == "var" {
-			return Some(Var)
+		} else if word == "new" {
+			return Some(New)
 		} else if word == "while" {
 			return Some(While)
 		}
