@@ -1,9 +1,8 @@
-
 mod lll;
 mod lang;
 use lang::*;
 
-// Incremental error system, where I just add a &str every error and continue parse
+// Incremental error system, where I just add a &str every error and continue parse [LOL I DIDN'T DO THAT YET]
 fn main() -> std::process::ExitCode {
 	let args: Vec<_> = std::env::args().collect();
 

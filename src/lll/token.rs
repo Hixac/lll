@@ -1,4 +1,6 @@
 
+use super::error::Error;
+
 #[derive(Debug)]
 pub enum Literal {
 	Float(f64),
@@ -9,207 +11,111 @@ pub enum Literal {
 }
 
 impl Literal { // sum, sub, mul, div, cmp
-	pub fn sum(v1: Literal, v2: Literal) -> Literal {
+	pub fn sum(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { String(format!("{v1}{v2}")) },
-			(Float(v1), Float(v2)) => { Float(v1 + v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot sum string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot sum float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 || v2) }
-			_ => {
-				eprintln!("FATAL: cannot sum nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(String(format!("{v1}{v2}"))),
+			(Float(v1), Float(v2)) => Ok(Float(v1 + v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot sum string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot sum float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 || v2)),
+			_ => Err(Error::new("FATAL: cannot sum nil or identifier", None))
 		}
 	}
 
-	pub fn sub(v1: Literal, v2: Literal) -> Literal {
+	pub fn sub(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => {
-				eprintln!("FATAL: cannot sub string and string");
-				std::process::exit(69);
-			},
-			(Float(v1), Float(v2)) => { Float(v1 - v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot sub string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot sub float and string");
-				std::process::exit(69);
-			},
-			(Bool(_), Bool(_)) => {
-				eprintln!("FATAL: cannot sub bool and bool");
-				std::process::exit(69);
-			}
-			_ => {
-				eprintln!("FATAL: cannot sub nil or identifier");
-				std::process::exit(69);
-			}
+			(String(_), String(_)) => Err(Error::new("FATAL: cannot sub string and string", None)),
+			(Float(v1), Float(v2)) => Ok(Float(v1 - v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot sub string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot sub float and string", None)),
+			(Bool(_), Bool(_)) => Err(Error::new("FATAL: cannot sub bool and bool", None)),
+			_ => Err(Error::new("FATAL: cannot sub nil or identifier", None)),
 		}
 	}
 
-	pub fn mul(v1: Literal, v2: Literal) -> Literal {
+	pub fn mul(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => {
-				eprintln!("FATAL: cannot mul string and string");
-				std::process::exit(69);
-			},
-			(Float(v1), Float(v2)) => { Float(v1 * v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot mul string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot mul float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 && v2) }
-			_ => {
-				eprintln!("FATAL: cannot mul nil or identifier");
-				std::process::exit(69);
-			}
+			(String(_), String(_)) => Err(Error::new("FATAL: cannot mul string and string", None)),
+			(Float(v1), Float(v2)) => Ok(Float(v1 * v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot mul string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot mul float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 && v2)),
+			_ => Err(Error::new("FATAL: cannot mul nil or identifier", None)),
 		}
 	}
 
-	pub fn div(v1: Literal, v2: Literal) -> Literal {
+	pub fn div(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => {
-				eprintln!("FATAL: cannot div string and string");
-				std::process::exit(69);
-			},
-			(Float(v1), Float(v2)) => { Float(v1 / v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot div string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot div float and string");
-				std::process::exit(69);
-			},
-			(Bool(_), Bool(_)) => {
-				eprintln!("FATAL: cannot div bool and bool");
-				std::process::exit(69);
-			}
-			_ => {
-				eprintln!("FATAL: cannot div nil or identifier");
-				std::process::exit(69);
-			}
+			(String(_), String(_)) => Err(Error::new("FATAL: cannot div string and string", None)),
+			(Float(v1), Float(v2)) => Ok(Float(v1 / v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot div string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot div float and string", None)),
+			(Bool(_), Bool(_)) => Err(Error::new("FATAL: cannot div bool and bool", None)),
+			_ => Err(Error::new("FATAL: cannot div nil or identifier", None)),
 		}
 	}
 
-	pub fn eq(v1: Literal, v2: Literal) -> Literal {
+	pub fn eq(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { Bool(v1 == v2) },
-			(Float(v1), Float(v2)) => { Bool(v1 == v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot eq string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot eq float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 == v2) }
-			_ => {
-				eprintln!("FATAL: cannot eq nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(Bool(v1 == v2)),
+			(Float(v1), Float(v2)) => Ok(Bool(v1 == v2) ),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot eq string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot eq float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 == v2)),
+			_ => Err(Error::new("FATAL: cannot eq nil or identifier", None)),
 		}
 	}
 
-	pub fn gt(v1: Literal, v2: Literal) -> Literal {
+	pub fn gt(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { Bool(v1.len() > v2.len()) },
-			(Float(v1), Float(v2)) => { Bool(v1 > v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot gt string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot gt float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 > v2) }
-			_ => {
-				eprintln!("FATAL: cannot gt nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(Bool(v1.len() > v2.len())),
+			(Float(v1), Float(v2)) => Ok(Bool(v1 > v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 > v2)),
+			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
-	pub fn egt(v1: Literal, v2: Literal) -> Literal {
+	pub fn egt(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { Bool(v1.len() >= v2.len()) },
-			(Float(v1), Float(v2)) => { Bool(v1 >= v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot gt string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot gt float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 >= v2) }
-			_ => {
-				eprintln!("FATAL: cannot gt nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(Bool(v1.len() >= v2.len())),
+			(Float(v1), Float(v2)) => Ok(Bool(v1 >= v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 >= v2)),
+			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
-	pub fn lt(v1: Literal, v2: Literal) -> Literal {
+	pub fn lt(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { Bool(v1.len() < v2.len()) },
-			(Float(v1), Float(v2)) => { Bool(v1 < v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot gt string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot gt float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 < v2) }
-			_ => {
-				eprintln!("FATAL: cannot gt nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(Bool(v1.len() < v2.len())),
+			(Float(v1), Float(v2)) => Ok(Bool(v1 < v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 < v2)),
+			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
-	pub fn elt(v1: Literal, v2: Literal) -> Literal {
+	pub fn elt(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(v1), String(v2)) => { Bool(v1.len() <= v2.len()) },
-			(Float(v1), Float(v2)) => { Bool(v1 <= v2) },
-			(String(_), Float(_)) => {
-				eprintln!("FATAL: cannot gt string and float");
-				std::process::exit(69);
-			},
-			(Float(_), String(_)) => {
-				eprintln!("FATAL: cannot gt float and string");
-				std::process::exit(69);
-			},
-			(Bool(v1), Bool(v2)) => { Bool(v1 <= v2) }
-			_ => {
-				eprintln!("FATAL: cannot gt nil or identifier");
-				std::process::exit(69);
-			}
+			(String(v1), String(v2)) => Ok(Bool(v1.len() <= v2.len())),
+			(Float(v1), Float(v2)) => Ok(Bool(v1 <= v2)),
+			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(Bool(v1), Bool(v2)) => Ok(Bool(v1 <= v2)),
+			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None))
 		}
 	}
 }

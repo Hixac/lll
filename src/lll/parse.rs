@@ -1,126 +1,21 @@
-
 use super::token::Token;
 use super::token::TokenType;
 use super::token::Literal;
 use super::error::Error;
 
-pub trait Stmt: Emit { }
-pub trait Emit {
-	fn emit(&mut self);
+pub enum Stmt { // Print, Variable, Expression
+	Print(Expr),
+	Variable(Token, Expr),
+	Expression(Expr)
 }
 
-struct Expression {
-	v: Box<dyn Expr>
-}
-
-impl Stmt for Expression { }
-impl Emit for Expression {
-	fn emit(&mut self) {
-		self.v.eval();
-	}
-}
-
-struct Print {
-	v: Box<dyn Expr>
-}
-
-impl Stmt for Print { }
-impl Emit for Print {
-	fn emit(&mut self) {
-		use Literal::*;
-		match self.v.eval() {
-			String(v) => {
-				print!("{}", v.replace("\\n", "\n"));
-			},
-			Float(v) => print!("{v}"),
-			Bool(v) => print!("{v}"),
-			Nil => print!("nil"),
-			Identifier(_) => print!("identifier"),
-		}
-	}
-}
-
-pub trait Expr: Eval { }
-pub trait Eval {
-	fn eval(&mut self) -> Literal;
-}
-
-struct Constant {
-	v: Literal,
-}
-
-impl Expr for Constant {}
-impl Eval for Constant {
-	fn eval(&mut self) -> Literal {
-		self.v.clone()
-	}
-}
-
-struct Group {
-	v: Box<dyn Expr>,
-}
-
-impl Expr for Group {}
-impl Eval for Group {
-	fn eval(&mut self) -> Literal {
-		self.v.eval()
-	}
-}
-
-struct Unary {
-	v: Box<dyn Expr>,
-	tok: Token
-}
-
-impl Expr for Unary {}
-impl Eval for Unary {
-	fn eval(&mut self) -> Literal {
-		use TokenType::*;
-		match self.tok.toktype {
-			Minus => { return Literal::sub(Literal::Float(0.0), self.v.eval()) },
-			Bang => {
-				match self.v.eval() {
-					Literal::Bool(v) => { return Literal::Bool(!v) }
-					_ => {
-						eprintln!("FATAL: unexpected literal");
-						std::process::exit(69);
-					}
-				}
-			},
-			_ => {
-				eprintln!("FATAL: unexpected unary token");
-				std::process::exit(69);
-			}
-		}
-	}
-}
-
-struct Binary {
-	v1: Box<dyn Expr>,
-	tok: Token,
-	v2: Box<dyn Expr>,
-}
-
-impl Expr for Binary {}
-impl Eval for Binary {
-	fn eval(&mut self) -> Literal {
-		use TokenType::*;
-		match self.tok.toktype {
-			Plus => { return Literal::sum(self.v1.eval(), self.v2.eval()) }
-			Minus => { return Literal::sub(self.v1.eval(), self.v2.eval()) }
-			Star => { return Literal::mul(self.v1.eval(), self.v2.eval()) }
-			Slash => { return Literal::div(self.v1.eval(), self.v2.eval()) }
-			Greater => { return Literal::gt(self.v1.eval(), self.v2.eval()) }
-			GreaterEqual => { return Literal::egt(self.v1.eval(), self.v2.eval()) }
-			Less => { return Literal::lt(self.v1.eval(), self.v2.eval()) }
-			LessEqual => { return Literal::elt(self.v1.eval(), self.v2.eval()) }
-			EqualEqual => { return Literal::eq(self.v1.eval(), self.v2.eval()) }
-			_ => {
-				eprintln!("FATAL: wrong operation");
-				std::process::exit(69)
-			}
-		}
-	}
+pub enum Expr { // Binary, Group, Unary, Variable, Constant, Assign
+	Binary(Box<Expr>, Token, Box<Expr>),
+	Unary(Token, Box<Expr>),
+	Group(Box<Expr>),
+	Variable(Token),
+	Assign(Token, Box<Expr>),
+	Constant(Literal)
 }
 
 pub struct Parser {
@@ -128,26 +23,49 @@ pub struct Parser {
 	current: usize,
 }
 
-type ResExpr = Result<Box<dyn Expr>, Error>;
-type ResStmt = Result<Box<dyn Stmt>, Error>;
+type ResExpr = Result<Expr, Error>;
+type ResStmt = Result<Stmt, Error>;
 impl Parser {
 	pub fn new(tokens: Vec<Token>) -> Self {
 		Self { tokens, current: 0 }
 	}
 
-	pub fn parse(&mut self) -> Option<Vec<Box<dyn Stmt>>> {
+	pub fn parse(&mut self) -> Option<Vec<Stmt>> {
 		
-		let mut stmts: Vec<Box<dyn Stmt>> = Vec::new();
+		let mut stmts: Vec<Stmt> = Vec::new();
 		while !self.is_at_end() {
-			match self.statement() {
+			match self.declaration() {
 				Ok(v) => stmts.push(v),
-				Err(v) => println!("{v}")
+				Err(v) => {
+					println!("{v}");
+					self.synchronize();
+				}
 			}
 		}
 
 		Some(stmts)
 	}
 
+	fn declaration(&mut self) -> ResStmt {
+		if self.select(&[TokenType::New]) {
+			return self.var_declaration();
+		}
+
+		self.statement()
+	}
+
+	fn var_declaration(&mut self) -> ResStmt {
+		let name = self.consume(TokenType::Identifier);
+		
+		let mut init: ResExpr = Ok(Expr::Constant(Literal::Nil));
+		if self.select(&[TokenType::Equal]) {
+			init = self.expression();
+		}
+
+		self.consume(TokenType::Semicolon);
+		Ok(Stmt::Variable(name?, init.ok().unwrap()))
+	}
+	
 	fn statement(&mut self) -> ResStmt {
 		if self.select(&[TokenType::Print]) {
 			return self.print_statement();
@@ -160,14 +78,14 @@ impl Parser {
 		let expr = self.expression();
 		self.consume(TokenType::Semicolon)?;
 
-		Ok(Box::new(Print { v: expr? }))
+		Ok(Stmt::Print(expr?))
 	}
 
 	fn expression_statement(&mut self) -> ResStmt {
 		let expr = self.expression();
 		self.consume(TokenType::Semicolon)?;
 
-		Ok(Box::new(Expression { v: expr? }))
+		Ok(Stmt::Expression(expr?))
 	}
 
 	fn is_at_end(&self) -> bool {
@@ -194,7 +112,28 @@ impl Parser {
 	}
 	
 	fn expression(&mut self) -> ResExpr {
-		self.equality()
+		self.assignment()
+	}
+
+	fn assignment(&mut self) -> ResExpr {
+		let expr = self.equality()?;
+
+		if self.select(&[TokenType::Equal]) {
+			let equals = self.tokens[self.current - 1].clone();
+			let value = self.assignment()?;
+
+			match expr {
+				Expr::Variable(t) => {
+					match t.literal {
+						Literal::Identifier(_) => return Ok(Expr::Assign(t.clone(), Box::new(value))),
+						_ => return Err(Error { token: Some(equals), msg: "invalid assignment target".to_string() } )
+					}
+				},
+				_ => return Err(Error { token: Some(equals), msg: "invalid assignment target".to_string() } )
+			}
+		}
+
+		Ok(expr)
 	}
 
 	fn equality(&mut self) -> ResExpr {
@@ -203,7 +142,7 @@ impl Parser {
 		while self.select(&[TokenType::BangEqual, TokenType::EqualEqual]) {
 			let op = self.tokens[self.current - 1].clone();
 			let expr2 = self.comparison();
-			expr1 = Ok(Box::new(Binary { v1: expr1?, tok: op, v2: expr2? }));
+			expr1 = Ok(Expr::Binary(Box::new(expr1?), op, Box::new(expr2?)));
 		}
 
 		expr1
@@ -216,7 +155,7 @@ impl Parser {
 							TokenType::Greater, TokenType::GreaterEqual]) {
 			let op = self.tokens[self.current - 1].clone();
 			let expr2 = self.term();
-			expr1 = Ok(Box::new(Binary { v1: expr1?, tok: op, v2: expr2? }));
+			expr1 = Ok(Expr::Binary(Box::new(expr1?), op, Box::new(expr2?)));
 		}
 
 		expr1
@@ -228,7 +167,7 @@ impl Parser {
 		while self.select(&[TokenType::Minus, TokenType::Plus]) {
 			let op = self.tokens[self.current - 1].clone();
 			let expr2 = self.factor();
-			expr1 = Ok(Box::new(Binary { v1: expr1?, tok: op, v2: expr2? }));
+			expr1 = Ok(Expr::Binary(Box::new(expr1?), op, Box::new(expr2?)));
 		}
 
 		expr1
@@ -240,7 +179,7 @@ impl Parser {
 		while self.select(&[TokenType::Slash, TokenType::Star]) {
 			let op = self.tokens[self.current - 1].clone();
 			let expr2 = self.unary();
-			expr1 = Ok(Box::new(Binary { v1: expr1?, tok: op, v2: expr2? }));
+			expr1 = Ok(Expr::Binary(Box::new(expr1?), op, Box::new(expr2?)));
 		}
 
 		expr1
@@ -250,7 +189,7 @@ impl Parser {
 		if self.select(&[TokenType::Minus, TokenType::Bang]) {
 			let op = self.tokens[self.current - 1].clone();
 			let expr = self.primary();
-			return Ok(Box::new(Unary { v: expr?, tok: op }))
+			return Ok(Expr::Unary(op, Box::new(expr?)))
 		}
 
 		self.primary()
@@ -258,20 +197,22 @@ impl Parser {
 
 	fn primary(&mut self) -> ResExpr {
 		if self.select(&[TokenType::True, TokenType::False, TokenType::Nil, TokenType::Number, TokenType::String]) {
-			return Ok(Box::new(Constant { v: self.tokens[self.current - 1].literal.clone() }))
+			return Ok(Expr::Constant(self.tokens[self.current - 1].literal.clone()))
+		} else if self.select(&[TokenType::Identifier]) {
+			return Ok(Expr::Variable(self.tokens[self.current - 1].clone()));
 		} else if self.select(&[TokenType::LeftParen]) {
 			let expr = self.expression();
 			self.consume(TokenType::RightParen)?;
-			return Ok(Box::new(Group { v: expr? }));
+			return Ok(Expr::Group(Box::new(expr?)));
 		}
 
 		Err(Error::new("expected expression", Some(&self.tokens[self.current])))
 	}
 
-	fn consume(&mut self, toktype: TokenType) -> Result<(), Error> {
+	fn consume(&mut self, toktype: TokenType) -> Result<Token, Error> {
 		if !self.is_at_end() && self.tokens[self.current].toktype == toktype {
 			self.current += 1;
-			return Ok(());
+			return Ok(self.tokens[self.current - 1].clone());
 		}
 
 		Err(Error::new(format!("expected {toktype}").as_str(), None))
