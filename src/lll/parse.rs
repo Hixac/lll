@@ -6,7 +6,8 @@ use super::error::Error;
 pub enum Stmt { // Print, Variable, Expression
 	Print(Expr),
 	Variable(Token, Expr),
-	Expression(Expr)
+	Expression(Expr),
+	Block(Vec<Stmt>)
 }
 
 pub enum Expr { // Binary, Group, Unary, Variable, Constant, Assign
@@ -62,13 +63,15 @@ impl Parser {
 			init = self.expression();
 		}
 
-		self.consume(TokenType::Semicolon);
+		self.consume(TokenType::Semicolon)?;
 		Ok(Stmt::Variable(name?, init?))
 	}
 	
 	fn statement(&mut self) -> ResStmt {
 		if self.select(&[TokenType::Print]) {
 			return self.print_statement();
+		} else if self.select(&[TokenType::LeftBrace]) {
+			return Ok(Stmt::Block(self.block_statement()?));
 		}
 
 		self.expression_statement()
@@ -81,6 +84,17 @@ impl Parser {
 		Ok(Stmt::Print(expr?))
 	}
 
+	fn block_statement(&mut self) -> Result<Vec<Stmt>, Error> {
+		let mut stmts = Vec::new();
+
+		while !self.is_at_end() && self.tokens[self.current].toktype != TokenType::RightBrace {
+			stmts.push(self.declaration()?);
+		}
+
+		self.consume(TokenType::RightBrace)?;
+		Ok(stmts)
+	}
+	
 	fn expression_statement(&mut self) -> ResStmt {
 		let expr = self.expression();
 		self.consume(TokenType::Semicolon)?;
@@ -217,7 +231,7 @@ impl Parser {
 			return Ok(self.tokens[self.current - 1].clone());
 		}
 
-		Err(Error::fatal(format!("expected {toktype}").as_str(), None))
+		Err(Error::fatal(format!("expected {toktype}").as_str(), Some(&self.tokens[self.current])))
 	}
 
 	fn select(&mut self, toktypes: &[TokenType]) -> bool {

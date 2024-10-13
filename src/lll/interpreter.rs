@@ -8,12 +8,19 @@ use super::token::Literal;
 use super::token::TokenType;
 
 struct Environment {
+	enclosing: Option<Box<Environment>>,
 	vals: HashMap<String, Literal>
 }
 
+impl Clone for Environment {
+	fn clone(&self) -> Self {
+		Self { enclosing: self.enclosing.clone(), vals: self.vals.clone() }
+	}
+}
+
 impl Environment {
-	pub fn new() -> Self {
-		Self { vals: HashMap::new() }
+	pub fn new(enc: Option<Box<Environment>>) -> Self {
+		Self { vals: HashMap::new(), enclosing: enc }
 	}
 	
 	pub fn get(&self, name: &Token) -> Result<Literal, Error> {
@@ -21,10 +28,17 @@ impl Environment {
 			Literal::Identifier(v) => {
 				match self.vals.get(v) {
 					Some(v) => Ok(v.clone()),
-					None => Err(Error::fatal("variable identifier not found", Some(&name)))
+					None => {
+						let Some(env) = &self.enclosing else {
+							return Err(Error::fatal("variable identifier not found", Some(&name)))
+						};
+						env.get(name)
+					}
 				}
 			},
-			_ => Err(Error::fatal("variable identifier was literal", Some(&name)))
+			_ => {
+				Err(Error::fatal("variable identifier was literal", Some(&name)))
+			}
 		}
 	}
 	
@@ -36,7 +50,11 @@ impl Environment {
 		match &name.literal {
 			Literal::Identifier(v) => {
 				let Some(key_val) = self.vals.get_mut(v) else {
-					return Err(())
+					let Some(env) = &mut self.enclosing else { // kinda messy
+						return Err(())
+					};
+					
+					return env.assign(name, val);
 				};
 				*key_val = val.clone();
 				Ok(())
@@ -52,7 +70,7 @@ pub struct Interpreter {
 
 impl Interpreter {
 	pub fn new() -> Self {
-		Self { env: Environment::new() }
+		Self { env: Environment::new(None) }
 	}
 	
 	pub fn interpret(&mut self, stmts: &mut Vec<Stmt>) -> Result<(), Error> {	
@@ -69,12 +87,26 @@ impl Interpreter {
 	fn execute_stmt(&mut self, stmt: &mut Stmt) -> Result<(), Error> {
 		match stmt {
 			Stmt::Variable(t, v) => self.var(&t, &v),
-			Stmt::Print(v) => Ok(self.print(&v)?),
+			Stmt::Print(v) => self.print(&v),
 			Stmt::Expression(v) => {
 				self.execute_expr(v)?;
 				Ok(())
-			}
+			},
+			Stmt::Block(v) => self.block(v)
 		}
+	}
+
+	fn block(&mut self, stmts: &mut Vec<Stmt>) -> Result<(), Error> {
+		let prev = self.env.clone();
+		self.env = Environment::new(Some(Box::new(prev.clone())));
+		
+		for i in stmts {
+			self.execute_stmt(i)?;
+		}
+
+		self.env = prev;
+
+		Ok(())
 	}
 
 	fn var(&mut self, t: &Token, v: &Expr) -> Result<(), Error> {
