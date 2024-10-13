@@ -63,7 +63,7 @@ impl Parser {
 		}
 
 		self.consume(TokenType::Semicolon);
-		Ok(Stmt::Variable(name?, init.ok().unwrap()))
+		Ok(Stmt::Variable(name?, init?))
 	}
 	
 	fn statement(&mut self) -> ResStmt {
@@ -125,11 +125,13 @@ impl Parser {
 			match expr {
 				Expr::Variable(t) => {
 					match t.literal {
-						Literal::Identifier(_) => return Ok(Expr::Assign(t.clone(), Box::new(value))),
-						_ => return Err(Error { token: Some(equals), msg: "invalid assignment target".to_string() } )
+						Literal::Identifier(_) => {
+							return Ok(Expr::Assign(t.clone(), Box::new(value)))
+						},
+						_ => return Err(Error::fatal("invalid assignment target", Some(&equals)))
 					}
 				},
-				_ => return Err(Error { token: Some(equals), msg: "invalid assignment target".to_string() } )
+				_ => return Err(Error::fatal("invalid assignment target", Some(&equals)))
 			}
 		}
 
@@ -206,7 +208,7 @@ impl Parser {
 			return Ok(Expr::Group(Box::new(expr?)));
 		}
 
-		Err(Error::new("expected expression", Some(&self.tokens[self.current])))
+		Err(Error::fatal("expected expression", Some(&self.tokens[self.current])))
 	}
 
 	fn consume(&mut self, toktype: TokenType) -> Result<Token, Error> {
@@ -215,7 +217,7 @@ impl Parser {
 			return Ok(self.tokens[self.current - 1].clone());
 		}
 
-		Err(Error::new(format!("expected {toktype}").as_str(), None))
+		Err(Error::fatal(format!("expected {toktype}").as_str(), None))
 	}
 
 	fn select(&mut self, toktypes: &[TokenType]) -> bool {

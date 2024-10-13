@@ -16,46 +16,46 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(String(format!("{v1}{v2}"))),
 			(Float(v1), Float(v2)) => Ok(Float(v1 + v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot sum string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot sum float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot sum string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot sum float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 || v2)),
-			_ => Err(Error::new("FATAL: cannot sum nil or identifier", None))
+			_ => Err(Error::fatal("FATAL: cannot sum nil or identifier", None))
 		}
 	}
 
 	pub fn sub(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => Err(Error::new("FATAL: cannot sub string and string", None)),
+			(String(_), String(_)) => Err(Error::fatal("FATAL: cannot sub string and string", None)),
 			(Float(v1), Float(v2)) => Ok(Float(v1 - v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot sub string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot sub float and string", None)),
-			(Bool(_), Bool(_)) => Err(Error::new("FATAL: cannot sub bool and bool", None)),
-			_ => Err(Error::new("FATAL: cannot sub nil or identifier", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot sub string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot sub float and string", None)),
+			(Bool(_), Bool(_)) => Err(Error::fatal("FATAL: cannot sub bool and bool", None)),
+			_ => Err(Error::fatal("FATAL: cannot sub nil or identifier", None)),
 		}
 	}
 
 	pub fn mul(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => Err(Error::new("FATAL: cannot mul string and string", None)),
+			(String(_), String(_)) => Err(Error::fatal("FATAL: cannot mul string and string", None)),
 			(Float(v1), Float(v2)) => Ok(Float(v1 * v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot mul string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot mul float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot mul string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot mul float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 && v2)),
-			_ => Err(Error::new("FATAL: cannot mul nil or identifier", None)),
+			_ => Err(Error::fatal("FATAL: cannot mul nil or identifier", None)),
 		}
 	}
 
 	pub fn div(v1: Literal, v2: Literal) -> Result<Literal, Error> {
 		use Literal::*;
 		match (v1, v2) {
-			(String(_), String(_)) => Err(Error::new("FATAL: cannot div string and string", None)),
+			(String(_), String(_)) => Err(Error::fatal("FATAL: cannot div string and string", None)),
 			(Float(v1), Float(v2)) => Ok(Float(v1 / v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot div string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot div float and string", None)),
-			(Bool(_), Bool(_)) => Err(Error::new("FATAL: cannot div bool and bool", None)),
-			_ => Err(Error::new("FATAL: cannot div nil or identifier", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot div string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot div float and string", None)),
+			(Bool(_), Bool(_)) => Err(Error::fatal("FATAL: cannot div bool and bool", None)),
+			_ => Err(Error::fatal("FATAL: cannot div nil or identifier", None)),
 		}
 	}
 
@@ -64,10 +64,10 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(Bool(v1 == v2)),
 			(Float(v1), Float(v2)) => Ok(Bool(v1 == v2) ),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot eq string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot eq float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot eq string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot eq float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 == v2)),
-			_ => Err(Error::new("FATAL: cannot eq nil or identifier", None)),
+			_ => Err(Error::fatal("FATAL: cannot eq nil or identifier", None)),
 		}
 	}
 
@@ -76,10 +76,10 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(Bool(v1.len() > v2.len())),
 			(Float(v1), Float(v2)) => Ok(Bool(v1 > v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot gt float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 > v2)),
-			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
+			_ => Err(Error::fatal("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
@@ -88,10 +88,10 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(Bool(v1.len() >= v2.len())),
 			(Float(v1), Float(v2)) => Ok(Bool(v1 >= v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot gt float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 >= v2)),
-			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
+			_ => Err(Error::fatal("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
@@ -100,10 +100,10 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(Bool(v1.len() < v2.len())),
 			(Float(v1), Float(v2)) => Ok(Bool(v1 < v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot gt float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 < v2)),
-			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None)),
+			_ => Err(Error::fatal("FATAL: cannot gt nil or identifier", None)),
 		}
 	}
 
@@ -112,10 +112,10 @@ impl Literal { // sum, sub, mul, div, cmp
 		match (v1, v2) {
 			(String(v1), String(v2)) => Ok(Bool(v1.len() <= v2.len())),
 			(Float(v1), Float(v2)) => Ok(Bool(v1 <= v2)),
-			(String(_), Float(_)) => Err(Error::new("FATAL: cannot gt string and float", None)),
-			(Float(_), String(_)) => Err(Error::new("FATAL: cannot gt float and string", None)),
+			(String(_), Float(_)) => Err(Error::fatal("FATAL: cannot gt string and float", None)),
+			(Float(_), String(_)) => Err(Error::fatal("FATAL: cannot gt float and string", None)),
 			(Bool(v1), Bool(v2)) => Ok(Bool(v1 <= v2)),
-			_ => Err(Error::new("FATAL: cannot gt nil or identifier", None))
+			_ => Err(Error::fatal("FATAL: cannot gt nil or identifier", None))
 		}
 	}
 }

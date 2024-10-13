@@ -21,10 +21,10 @@ impl Environment {
 			Literal::Identifier(v) => {
 				match self.vals.get(v) {
 					Some(v) => Ok(v.clone()),
-					None => Err(Error::new("variable identifier not found", Some(&name)))
+					None => Err(Error::fatal("variable identifier not found", Some(&name)))
 				}
 			},
-			_ => Err(Error::new("variable identifier was literal", Some(&name)))
+			_ => Err(Error::fatal("variable identifier was literal", Some(&name)))
 		}
 	}
 	
@@ -32,16 +32,16 @@ impl Environment {
 		self.vals.insert(name, val);
 	}
 
-	pub fn assign(&mut self, name: &Token, val: &Literal) -> Result<(), Error> {
+	pub fn assign(&mut self, name: &Token, val: &Literal) -> Result<(), ()> {
 		match &name.literal {
 			Literal::Identifier(v) => {
 				let Some(key_val) = self.vals.get_mut(v) else {
-					return Err(Error::new("trying to change non-existing variable", Some(&name)))
+					return Err(())
 				};
 				*key_val = val.clone();
 				Ok(())
 			}
-			_ => Err(Error::new("trying to change non-existing variable", Some(&name)))
+			_ => Err(())
 		}
 	}
 }
@@ -71,7 +71,7 @@ impl Interpreter {
 			Stmt::Variable(t, v) => self.var(&t, &v),
 			Stmt::Print(v) => Ok(self.print(&v)?),
 			Stmt::Expression(v) => {
-				self.execute_expr(v);
+				self.execute_expr(v)?;
 				Ok(())
 			}
 		}
@@ -84,7 +84,7 @@ impl Interpreter {
 				self.env.define(name.clone(), expr);
 				return Ok(())
 			},
-			_ => return Err(Error {token: Some(t.clone()), msg: "wrong the hell literal".to_string()}),
+			_ => return Err(Error::fatal("wrong the hell literal", Some(&t))),
 		}
 	}
 	
@@ -117,8 +117,14 @@ impl Interpreter {
 
 	fn assign(&mut self, t: &Token, expr: &Expr) -> Result<Literal, Error> {
 		let val = self.execute_expr(expr)?;
-		self.env.assign(&t, &val)?;
-		Ok(val)
+		match self.env.assign(&t, &val) {
+			Ok(()) => {
+				Ok(val)
+			}
+			Err(()) => {
+				return Err(Error::fatal("trying to change non-existing variable", Some(&t)))
+			}
+		}
 	}
 
 	fn binary(&mut self, v1: &Box<Expr>, t: &Token, v2: &Box<Expr>) -> Result<Literal, Error> {
@@ -133,7 +139,7 @@ impl Interpreter {
 			GreaterEqual => Literal::egt(self.execute_expr(v1)?, self.execute_expr(v2)?),
 			Less => Literal::lt(self.execute_expr(v1)?, self.execute_expr(v2)?),
 			LessEqual => Literal::elt(self.execute_expr(v1)?, self.execute_expr(v2)?),
-			_ => Err(Error::new("FATAL: unexpected operator in binary!", Some(&t)))
+			_ => Err(Error::fatal("FATAL: unexpected operator in binary!", Some(&t)))
 		}
 	}
 
@@ -144,10 +150,10 @@ impl Interpreter {
 			Bang => {
 				match self.execute_expr(v)? {
 					Literal::Bool(b) => Ok(Literal::Bool(!b)),
-					_ => Err(Error::new("FATAL: unexpected operator in unary!", Some(&t)))
+					_ => Err(Error::fatal("FATAL: unexpected operator in unary!", Some(&t)))
 				}
 			},
-			_ => Err(Error::new("FATAL: unexpected operator in unary!", Some(&t)))
+			_ => Err(Error::fatal("FATAL: unexpected operator in unary!", Some(&t)))
 		}
 	}
 

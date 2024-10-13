@@ -114,7 +114,7 @@ impl Lexer {
 			c if c.is_digit(10) => self.number(),
 			c if c.is_alphabetic() => self.indentifier(),
 			_ => {
-				return Err(Error::new(format!("unexpected character, char {c}, line {}, place {}", self.line, self.place).as_str(), None));
+				return Err(Error::fatal(format!("unexpected character, char {c}, line {}, place {}", self.line, self.place).as_str(), None));
 			}
 		}
 		Ok(())
