@@ -92,8 +92,18 @@ impl Interpreter {
 				self.execute_expr(v)?;
 				Ok(())
 			},
-			Stmt::Block(v) => self.block(v)
+			Stmt::Block(v) => self.block(v),
+			Stmt::If(s, v, o) => self.ifcond(s, v, o)
 		}
+	}
+
+	fn ifcond(&mut self, expr: &Expr, stmt: &mut Stmt, opt: &mut Option<Box<Stmt>>) -> Result<(), Error> {
+		if Literal::is_true_val(self.execute_expr(expr)?)? {
+			self.execute_stmt(stmt)?;
+		} else if let Some(opt) = opt {
+			self.execute_stmt(opt)?;
+		}
+		Ok(())
 	}
 
 	fn block(&mut self, stmts: &mut Vec<Stmt>) -> Result<(), Error> {
@@ -122,6 +132,7 @@ impl Interpreter {
 	
 	fn print(&mut self, v: &Expr) -> Result<(), Error> {
 		use Literal::*;
+		
 		match self.execute_expr(&v)? {
 			String(v) => {
 				print!("{}", v.replace("\\n", "\n"));
@@ -139,6 +150,7 @@ impl Interpreter {
 		use Expr::*;
 		match expr {
 			Binary(v1, t, v2) => self.binary(v1, t, v2),
+			Logical(v1, t, v2) => self.logical(v1, t, v2),
 			Unary(t, v) => self.unary(t, v),
 			Group(v) => self.execute_expr(&v),
 			Variable(t) => self.env.get(t),
@@ -159,6 +171,22 @@ impl Interpreter {
 		}
 	}
 
+	fn logical(&mut self, v1: &Box<Expr>, t: &Token, v2: &Box<Expr>) -> Result<Literal, Error> {
+		let left = self.execute_expr(v1);
+
+		if t.toktype == TokenType::Or {
+			if Literal::is_true_val(self.execute_expr(v1)?)? {
+				return left
+			}
+		} else {
+			if !Literal::is_true_val(self.execute_expr(v1)?)? {
+				return left
+			}
+		}
+
+		self.execute_expr(v2)
+	}
+	
 	fn binary(&mut self, v1: &Box<Expr>, t: &Token, v2: &Box<Expr>) -> Result<Literal, Error> {
 		use TokenType::*;
 		match &t.toktype {
@@ -171,7 +199,7 @@ impl Interpreter {
 			GreaterEqual => Literal::egt(self.execute_expr(v1)?, self.execute_expr(v2)?),
 			Less => Literal::lt(self.execute_expr(v1)?, self.execute_expr(v2)?),
 			LessEqual => Literal::elt(self.execute_expr(v1)?, self.execute_expr(v2)?),
-			_ => Err(Error::fatal("FATAL: unexpected operator in binary!", Some(&t)))
+			_ => Err(Error::fatal("unexpected operator in binary!", Some(&t)))
 		}
 	}
 
@@ -182,10 +210,10 @@ impl Interpreter {
 			Bang => {
 				match self.execute_expr(v)? {
 					Literal::Bool(b) => Ok(Literal::Bool(!b)),
-					_ => Err(Error::fatal("FATAL: unexpected operator in unary!", Some(&t)))
+					_ => Err(Error::fatal("unexpected operator in unary!", Some(&t)))
 				}
 			},
-			_ => Err(Error::fatal("FATAL: unexpected operator in unary!", Some(&t)))
+			_ => Err(Error::fatal("unexpected operator in unary!", Some(&t)))
 		}
 	}
 

@@ -7,11 +7,13 @@ pub enum Stmt { // Print, Variable, Expression
 	Print(Expr),
 	Variable(Token, Expr),
 	Expression(Expr),
-	Block(Vec<Stmt>)
+	Block(Vec<Stmt>),
+	If(Expr, Box<Stmt>, Option<Box<Stmt>>)
 }
 
 pub enum Expr { // Binary, Group, Unary, Variable, Constant, Assign
 	Binary(Box<Expr>, Token, Box<Expr>),
+	Logical(Box<Expr>, Token, Box<Expr>),
 	Unary(Token, Box<Expr>),
 	Group(Box<Expr>),
 	Variable(Token),
@@ -70,6 +72,8 @@ impl Parser {
 	fn statement(&mut self) -> ResStmt {
 		if self.select(&[TokenType::Print]) {
 			return self.print_statement();
+		} if self.select(&[TokenType::If]) {
+			return self.if_statement();
 		} else if self.select(&[TokenType::LeftBrace]) {
 			return Ok(Stmt::Block(self.block_statement()?));
 		}
@@ -77,6 +81,20 @@ impl Parser {
 		self.expression_statement()
 	}
 
+	fn if_statement(&mut self) -> ResStmt {
+		self.consume(TokenType::LeftParen)?;
+		let condition = self.expression()?;
+		self.consume(TokenType::RightParen)?;
+
+		let then = Box::new(self.statement()?);
+		let mut after = None;
+		if self.select(&[TokenType::Else]) {
+			after = Some(Box::new(self.statement()?));
+		}
+
+		Ok(Stmt::If(condition, then, after))
+	}
+	
 	fn print_statement(&mut self) -> ResStmt {
 		let expr = self.expression();
 		self.consume(TokenType::Semicolon)?;
@@ -130,7 +148,7 @@ impl Parser {
 	}
 
 	fn assignment(&mut self) -> ResExpr {
-		let expr = self.equality()?;
+		let expr = self.or()?;
 
 		if self.select(&[TokenType::Equal]) {
 			let equals = self.tokens[self.current - 1].clone();
@@ -152,6 +170,30 @@ impl Parser {
 		Ok(expr)
 	}
 
+	fn or(&mut self) -> ResExpr {
+		let mut expr = self.and();
+
+		while self.select(&[TokenType::Or]) {
+			let op = self.tokens[self.current - 1].clone();
+			let right = self.and();
+			expr = Ok(Expr::Logical(Box::new(expr?), op, Box::new(right?)));
+		}
+
+		expr
+	}
+
+	fn and(&mut self) -> ResExpr {
+		let mut expr = self.equality();
+
+		while self.select(&[TokenType::And]) {
+			let op = self.tokens[self.current - 1].clone();
+			let right = self.and();
+			expr = Ok(Expr::Logical(Box::new(expr?), op, Box::new(right?)));
+		}
+
+		expr
+	}
+	
 	fn equality(&mut self) -> ResExpr {
 		let mut expr1 = self.comparison();
 
